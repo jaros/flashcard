@@ -24,9 +24,6 @@ flashcard/
 │   │           └── route.test.ts           # API route tests
 │   ├── components/
 │   │   └── FlashcardComponent.tsx          # Reusable flashcard display with flip animation
-│   ├── data/
-│   │   ├── flashcards.ts                   # TypeScript interface and types
-│   │   └── flashcards.json                 # Legacy JSON data (kept for reference)
 │   ├── hooks/
 │   │   └── useFlashcards.ts                # Custom hook for flashcard data management
 │   ├── lib/
@@ -54,7 +51,6 @@ flashcard/
 ├── next.config.ts                          # Next.js configuration
 ├── postcss.config.mjs                      # PostCSS configuration
 ├── eslint.config.mjs                       # ESLint configuration
-├── SETUP.md                                # Vercel Postgres setup guide
 └── README.md                               # Project documentation
 ```
 
@@ -133,7 +129,7 @@ npm start
 - **Read**: View all flashcards in a scrollable list
 - **Update**: Edit existing flashcards
 - **Delete**: Remove flashcards from the deck
-- Changes are persisted to `app/data/flashcards.json`
+- Changes are persisted to Vercel Postgres database
 - Accessible from `/admin` with link in home page footer
 
 ### Technical Features
@@ -169,7 +165,6 @@ This project uses **Vercel Postgres** for persistent data storage, which works s
 1. Create a Vercel Postgres database in your Vercel project
 2. Set `POSTGRES_PRISMA_URL` environment variable (auto-configured by Vercel)
 3. Run `npm run db:seed` to initialize the database with sample flashcards
-4. For detailed setup instructions, see [SETUP.md](./SETUP.md)
 
 ### Database Layer
 
