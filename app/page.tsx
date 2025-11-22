@@ -2,9 +2,11 @@
 
 import { useState } from 'react';
 import FlashcardComponent from '@/app/components/FlashcardComponent';
-import { flashcards } from '@/app/data/flashcards';
+import { useFlashcards } from '@/app/hooks/useFlashcards';
+import Link from 'next/link';
 
 export default function Home() {
+  const { flashcards, loading } = useFlashcards();
   const [currentIndex, setCurrentIndex] = useState(0);
 
   const goToPrevious = () => {
@@ -14,6 +16,14 @@ export default function Home() {
   const goToNext = () => {
     setCurrentIndex((prev) => (prev === flashcards.length - 1 ? 0 : prev + 1));
   };
+
+  if (loading || flashcards.length === 0) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-black">
+        <p className="text-gray-600 dark:text-gray-400">Loading flashcards...</p>
+      </div>
+    );
+  }
 
   const currentCard = flashcards[currentIndex];
   const progress = `${currentIndex + 1} / ${flashcards.length}`;
@@ -61,6 +71,15 @@ export default function Home() {
               {index + 1}
             </button>
           ))}
+        </div>
+
+        <div className="mt-12 text-center">
+          <Link
+            href="/admin"
+            className="text-sm text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 underline"
+          >
+            Admin Panel
+          </Link>
         </div>
       </main>
     </div>

@@ -16,25 +16,37 @@ Flashcard is a Next.js web application bootstrapped with `create-next-app`. It's
 
 ```
 flashcard/
-├── app/                      # Next.js app directory
-│   ├── favicon.ico          # Application favicon
-│   ├── globals.css          # Global styles
-│   ├── layout.tsx           # Root layout component
-│   └── page.tsx             # Home page component
-├── public/                   # Static assets
+├── app/
+│   ├── api/
+│   │   └── flashcards/
+│   │       └── route.ts     # API endpoints for CRUD operations
+│   ├── components/
+│   │   └── FlashcardComponent.tsx  # Reusable flashcard display with flip animation
+│   ├── data/
+│   │   ├── flashcards.ts   # TypeScript interface and types
+│   │   └── flashcards.json # Persistent storage for flashcard data
+│   ├── hooks/
+│   │   └── useFlashcards.ts # Custom hook for flashcard data management
+│   ├── admin/
+│   │   └── page.tsx        # Admin panel for managing flashcards
+│   ├── favicon.ico
+│   ├── globals.css
+│   ├── layout.tsx
+│   └── page.tsx            # Home page with flashcard viewer
+├── public/                  # Static assets
 │   ├── file.svg
 │   ├── globe.svg
 │   ├── next.svg
 │   ├── vercel.svg
 │   └── window.svg
-├── .zencoder/               # Zencoder configuration
-├── .idea/                   # IDE configuration
-├── package.json             # Project dependencies and scripts
-├── tsconfig.json            # TypeScript configuration
-├── next.config.ts           # Next.js configuration
-├── postcss.config.mjs        # PostCSS configuration
-├── eslint.config.mjs        # ESLint configuration
-└── README.md                # Original Next.js README
+├── .zencoder/              # Zencoder configuration
+├── .idea/                  # IDE configuration
+├── package.json            # Project dependencies and scripts
+├── tsconfig.json           # TypeScript configuration
+├── next.config.ts          # Next.js configuration
+├── postcss.config.mjs      # PostCSS configuration
+├── eslint.config.mjs       # ESLint configuration
+└── README.md               # Original Next.js README
 ```
 
 ## Getting Started
@@ -95,9 +107,40 @@ npm start
 
 ## Features
 
+### Flashcard Viewer
+- Interactive 3D flip animation on click
+- Navigate between cards with Previous/Next buttons
+- Jump to specific cards using numbered buttons
+- Progress indicator showing current card position
+- Questions displayed on front (blue), answers on back (green)
+- New cards always show the question first
+
+### Admin Panel
+- **Create**: Add new flashcards with question and answer
+- **Read**: View all flashcards in a scrollable list
+- **Update**: Edit existing flashcards
+- **Delete**: Remove flashcards from the deck
+- Changes are persisted to `app/data/flashcards.json`
+- Accessible from `/admin` with link in home page footer
+
+### Technical Features
 - Server-side rendering with Next.js
-- TypeScript support
+- TypeScript support with strict mode
 - Tailwind CSS for styling
 - Dark mode support (using dark class utilities)
-- Optimized images with Next.js Image component
+- RESTful API routes for data management
+- File-based persistence (JSON)
+- Custom `useFlashcards` hook for state management
 - ESLint for code quality
+
+## API Endpoints
+
+- **GET** `/api/flashcards` - Fetch all flashcards
+- **POST** `/api/flashcards` - Create a new flashcard
+- **PUT** `/api/flashcards` - Update a flashcard
+- **DELETE** `/api/flashcards` - Delete a flashcard
+
+## Pages
+
+- **`/`** - Home page with flashcard viewer and navigation
+- **`/admin`** - Admin panel for managing flashcards
