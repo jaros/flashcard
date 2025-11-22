@@ -1,8 +1,8 @@
 import { GET, POST, PUT, DELETE } from '../route';
 import { NextRequest } from 'next/server';
-import fs from 'fs';
+import * as db from '@/app/lib/db';
 
-jest.mock('fs');
+jest.mock('@/app/lib/db');
 
 const mockFlashcards = [
   { id: 1, question: 'Q1', answer: 'A1' },
@@ -15,33 +15,19 @@ describe('Flashcard API Routes', () => {
   });
 
   describe('GET /api/flashcards', () => {
-    it('should return flashcards from JSON file if it exists', async () => {
-      const mockData = JSON.stringify(mockFlashcards);
-      (fs.existsSync as jest.Mock).mockReturnValue(true);
-      (fs.readFileSync as jest.Mock).mockReturnValue(mockData);
+    it('should return flashcards from database', async () => {
+      (db.getFlashcards as jest.Mock).mockResolvedValue(mockFlashcards);
 
       const response = await GET();
       const data = await response.json();
 
       expect(response.status).toBe(200);
       expect(data).toEqual(mockFlashcards);
-    });
-
-    it('should return default flashcards if JSON file does not exist', async () => {
-      (fs.existsSync as jest.Mock).mockReturnValue(false);
-
-      const response = await GET();
-      const data = await response.json();
-
-      expect(response.status).toBe(200);
-      expect(Array.isArray(data)).toBe(true);
-      expect(data.length).toBeGreaterThan(0);
+      expect(db.getFlashcards).toHaveBeenCalled();
     });
 
     it('should handle errors gracefully', async () => {
-      (fs.existsSync as jest.Mock).mockImplementation(() => {
-        throw new Error('File system error');
-      });
+      (db.getFlashcards as jest.Mock).mockRejectedValue(new Error('Database error'));
 
       const response = await GET();
 
@@ -50,11 +36,10 @@ describe('Flashcard API Routes', () => {
   });
 
   describe('POST /api/flashcards', () => {
-    it('should create a new flashcard and assign an ID', async () => {
+    it('should create a new flashcard', async () => {
       const newCard = { question: 'New Q', answer: 'New A' };
-      (fs.existsSync as jest.Mock).mockReturnValue(true);
-      (fs.readFileSync as jest.Mock).mockReturnValue(JSON.stringify(mockFlashcards));
-      (fs.writeFileSync as jest.Mock).mockImplementation(() => {});
+      const createdCard = { id: 3, ...newCard };
+      (db.createFlashcard as jest.Mock).mockResolvedValue(createdCard);
 
       const request = {
         json: async () => newCard,
@@ -67,33 +52,24 @@ describe('Flashcard API Routes', () => {
       expect(data.question).toBe('New Q');
       expect(data.answer).toBe('New A');
       expect(data.id).toBe(3);
+      expect(db.createFlashcard).toHaveBeenCalledWith('New Q', 'New A');
     });
 
-    it('should persist the new flashcard to file', async () => {
-      const newCard = { question: 'New Q', answer: 'New A' };
-      (fs.existsSync as jest.Mock).mockReturnValue(true);
-      (fs.readFileSync as jest.Mock).mockReturnValue(JSON.stringify(mockFlashcards));
-      (fs.writeFileSync as jest.Mock).mockImplementation(() => {});
+    it('should validate required fields', async () => {
+      const invalidCard = { question: 'Q' };
 
       const request = {
-        json: async () => newCard,
+        json: async () => invalidCard,
       } as unknown as NextRequest;
 
-      await POST(request);
+      const response = await POST(request);
 
-      expect(fs.writeFileSync).toHaveBeenCalled();
-      const writeCall = (fs.writeFileSync as jest.Mock).mock.calls[0];
-      expect(writeCall[0]).toContain('flashcards.json');
-      const writtenData = JSON.parse(writeCall[1]);
-      expect(writtenData).toHaveLength(3);
-      expect(writtenData[2].id).toBe(3);
+      expect(response.status).toBe(400);
     });
 
-    it('should handle errors during POST', async () => {
-      const newCard = { question: 'New Q', answer: 'New A' };
-      (fs.existsSync as jest.Mock).mockImplementation(() => {
-        throw new Error('File system error');
-      });
+    it('should handle database errors', async () => {
+      const newCard = { question: 'Q', answer: 'A' };
+      (db.createFlashcard as jest.Mock).mockRejectedValue(new Error('DB error'));
 
       const request = {
         json: async () => newCard,
@@ -108,9 +84,7 @@ describe('Flashcard API Routes', () => {
   describe('PUT /api/flashcards', () => {
     it('should update an existing flashcard', async () => {
       const updatedCard = { id: 1, question: 'Updated Q', answer: 'Updated A' };
-      (fs.existsSync as jest.Mock).mockReturnValue(true);
-      (fs.readFileSync as jest.Mock).mockReturnValue(JSON.stringify(mockFlashcards));
-      (fs.writeFileSync as jest.Mock).mockImplementation(() => {});
+      (db.updateFlashcard as jest.Mock).mockResolvedValue(updatedCard);
 
       const request = {
         json: async () => updatedCard,
@@ -123,12 +97,12 @@ describe('Flashcard API Routes', () => {
       expect(data.id).toBe(1);
       expect(data.question).toBe('Updated Q');
       expect(data.answer).toBe('Updated A');
+      expect(db.updateFlashcard).toHaveBeenCalledWith(1, 'Updated Q', 'Updated A');
     });
 
     it('should return 404 if flashcard not found', async () => {
       const updatedCard = { id: 999, question: 'Q', answer: 'A' };
-      (fs.existsSync as jest.Mock).mockReturnValue(true);
-      (fs.readFileSync as jest.Mock).mockReturnValue(JSON.stringify(mockFlashcards));
+      (db.updateFlashcard as jest.Mock).mockResolvedValue(null);
 
       const request = {
         json: async () => updatedCard,
@@ -139,30 +113,22 @@ describe('Flashcard API Routes', () => {
       expect(response.status).toBe(404);
     });
 
-    it('should persist the updated flashcard to file', async () => {
-      const updatedCard = { id: 1, question: 'Updated Q', answer: 'Updated A' };
-      (fs.existsSync as jest.Mock).mockReturnValue(true);
-      (fs.readFileSync as jest.Mock).mockReturnValue(JSON.stringify(mockFlashcards));
-      (fs.writeFileSync as jest.Mock).mockImplementation(() => {});
+    it('should validate required fields', async () => {
+      const invalidCard = { id: 1, question: 'Q' };
 
       const request = {
-        json: async () => updatedCard,
+        json: async () => invalidCard,
       } as unknown as NextRequest;
 
-      await PUT(request);
+      const response = await PUT(request);
 
-      expect(fs.writeFileSync).toHaveBeenCalled();
-      const writeCall = (fs.writeFileSync as jest.Mock).mock.calls[0];
-      const writtenData = JSON.parse(writeCall[1]);
-      expect(writtenData[0]).toEqual(updatedCard);
+      expect(response.status).toBe(400);
     });
   });
 
   describe('DELETE /api/flashcards', () => {
     it('should delete a flashcard by id', async () => {
-      (fs.existsSync as jest.Mock).mockReturnValue(true);
-      (fs.readFileSync as jest.Mock).mockReturnValue(JSON.stringify(mockFlashcards));
-      (fs.writeFileSync as jest.Mock).mockImplementation(() => {});
+      (db.deleteFlashcard as jest.Mock).mockResolvedValue(true);
 
       const request = {
         json: async () => ({ id: 1 }),
@@ -171,30 +137,33 @@ describe('Flashcard API Routes', () => {
       const response = await DELETE(request);
 
       expect(response.status).toBe(200);
+      expect(db.deleteFlashcard).toHaveBeenCalledWith(1);
     });
 
-    it('should remove the flashcard from storage', async () => {
-      (fs.existsSync as jest.Mock).mockReturnValue(true);
-      (fs.readFileSync as jest.Mock).mockReturnValue(JSON.stringify(mockFlashcards));
-      (fs.writeFileSync as jest.Mock).mockImplementation(() => {});
+    it('should return 404 if flashcard not found', async () => {
+      (db.deleteFlashcard as jest.Mock).mockResolvedValue(false);
 
       const request = {
-        json: async () => ({ id: 1 }),
+        json: async () => ({ id: 999 }),
       } as unknown as NextRequest;
 
-      await DELETE(request);
+      const response = await DELETE(request);
 
-      expect(fs.writeFileSync).toHaveBeenCalled();
-      const writeCall = (fs.writeFileSync as jest.Mock).mock.calls[0];
-      const writtenData = JSON.parse(writeCall[1]);
-      expect(writtenData).toHaveLength(1);
-      expect(writtenData[0].id).toBe(2);
+      expect(response.status).toBe(404);
     });
 
-    it('should handle errors during DELETE', async () => {
-      (fs.existsSync as jest.Mock).mockImplementation(() => {
-        throw new Error('File system error');
-      });
+    it('should validate id is provided', async () => {
+      const request = {
+        json: async () => ({}),
+      } as unknown as NextRequest;
+
+      const response = await DELETE(request);
+
+      expect(response.status).toBe(400);
+    });
+
+    it('should handle database errors', async () => {
+      (db.deleteFlashcard as jest.Mock).mockRejectedValue(new Error('DB error'));
 
       const request = {
         json: async () => ({ id: 1 }),
